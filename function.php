@@ -1,20 +1,37 @@
 <?php
-//title取得
+// title取得
 function getPageTitle( $url ) {
-    $html = file_get_contents($url); //file_get_contents関数で指定されたURLからHTML文字列を取得
-    $html = mb_convert_encoding($html,"UTF-8","auto"); //mb_convert_encoding関数で内部エンコーディングに指定している文字コードに変換
-    if ( preg_match( "/<title>(.*?)<\/title>/i", $html, $matches) ) { //preg_match関数で正規表現を使ってtitleタグを抜き出す
-        return $matches[1];
-    } else {
-        return false;
+    $html = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 5]]));
+    if ($html === false) {
+        return '[取得失敗]';
     }
+    $html = mb_convert_encoding($html, "UTF-8", "auto");
+    if (preg_match("/<title>(.*?)<\/title>/i", $html, $matches)) {
+        return trim($matches[1]);
+    }
+    return '[title未検出]';
 }
 
+// meta description取得（エラー対応）
+function getMetaDescription( $url ) {
+    $tags = @get_meta_tags($url);
+    if ($tags === false || !isset($tags['description'])) {
+        return '[未検出]';
+    }
+    return mb_convert_encoding($tags['description'], "UTF-8", "auto");
+}
 
-//canonical取得
-
-
-
-
-
+// canonical取得
+function getCanonical( $url ) {
+    $html = @file_get_contents($url, false, stream_context_create(['http' => ['timeout' => 5]]));
+    if ($html === false) {
+        return '[取得失敗]';
+    }
+    $html = mb_convert_encoding($html, "UTF-8", "auto");
+    if (preg_match("/<link[^>]*rel=['\"]canonical['\"][^>]*href=['\"]([^'\"]+)['\"][^>]*>/i", $html, $matches) ||
+        preg_match("/<link[^>]*href=['\"]([^'\"]+)['\"][^>]*rel=['\"]canonical['\"][^>]*>/i", $html, $matches)) {
+        return trim($matches[1]);
+    }
+    return '[検出されず]';
+}
 ?>
